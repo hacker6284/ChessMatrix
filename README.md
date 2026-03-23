@@ -1,8 +1,17 @@
 # ChessMatrix
 
+[![npm](https://img.shields.io/npm/v/chessmatrix)](https://www.npmjs.com/package/chessmatrix)
+[![PyPI](https://img.shields.io/pypi/v/chessmatrix)](https://pypi.org/project/chessmatrix/)
+[![Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://hacker6284.github.io/ChessMatrix/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 **A 4-color 8×8 2D barcode format.**
 
 ChessMatrix is a compact, machine-readable 2D barcode that fits in an 8×8 cell grid — the same footprint as a chessboard — by using four colors (black, red, green, blue) instead of the traditional two, yielding 2 bits of information per cell. It is designed as a minimal, scannable symbol for applications where even the smallest standard formats (DataMatrix 10×10, Micro QR 11×11) are too large.
+
+<p align="center">
+  <img src="chessmatrix_demo.png" width="240" alt="ChessMatrix barcode example encoding 0xDEADBEEF" />
+</p>
 
 ## Installation
 
