@@ -4,6 +4,27 @@
 
 ChessMatrix is a compact, machine-readable 2D barcode that fits in an 8×8 cell grid — the same footprint as a chessboard — by using four colors (black, red, green, blue) instead of the traditional two, yielding 2 bits of information per cell. It is designed as a minimal, scannable symbol for applications where even the smallest standard formats (DataMatrix 10×10, Micro QR 11×11) are too large.
 
+## Installation
+
+**Python**
+```bash
+pip install chessmatrix
+# render_image() also requires Pillow:
+pip install "chessmatrix[render]"
+```
+
+**JavaScript / Node.js**
+```bash
+npm install chessmatrix
+```
+
+**Browser (no bundler)**
+```html
+<script type="module">
+  import { buildGrid, renderGrid } from 'https://cdn.jsdelivr.net/npm/chessmatrix/chessmatrix.js';
+</script>
+```
+
 ---
 
 ## 1. Motivation
@@ -202,36 +223,89 @@ Each unknown cell is classified to the nearest anchor in RGB color space (Euclid
 
 ## 8. Python Implementation
 
-See `chessmatrix.py` for a reference implementation providing:
-
-- `encode(data: bytes) -> Grid` — encode 4 bytes to an 8×8 color grid
-- `decode(grid: Grid) -> bytes` — decode grid back to 4 bytes
-- `render_image(grid, path, cell_size=40)` — save PNG (requires Pillow)
-- `render_ascii(grid)` — print colored ASCII art to terminal
-- `Grid` is `List[List[int]]`, an 8×8 nested list of color values 0–3
-
-### Quick start
+Install: `pip install chessmatrix`  (add `[render]` extra for PNG output)
 
 ```python
 from chessmatrix import encode, decode, render_image, render_ascii
 
 data = b'\xDE\xAD\xBE\xEF'
-grid = encode(data)
-render_ascii(grid)
-render_image(grid, 'code.png', cell_size=60)
+grid = encode(data)          # List[List[int]], 8×8, values 0-3 or -1
+render_ascii(grid)           # colored output in terminal
+render_image(grid, 'code.png', cell_size=60)   # requires Pillow
 
 recovered = decode(grid)
 assert recovered == data
 ```
 
+**API**
+
+| Function | Description |
+|---|---|
+| `encode(data: bytes) -> Grid` | Encode 4 bytes → 8×8 color grid |
+| `decode(grid: Grid) -> bytes` | Decode grid → 4 bytes (RS error correction applied) |
+| `render_image(grid, path, cell_size=40)` | Save PNG (requires Pillow) |
+| `render_ascii(grid)` | Print colored ASCII art to terminal |
+| `CorrectionError` | Raised when RS decoding cannot correct errors |
+
+`Grid` is `List[List[int]]` — an 8×8 nested list of color values (0–3, or -1 for white structural cells).
+
 ---
 
-## 9. Future Extensions
+## 9. JavaScript Implementation
 
-- **Rotation/mirroring detection**: use asymmetric anchor colors or a dedicated orientation cell.
-- **Stacked symbols**: tile multiple ChessMatrix codes for larger payloads.
-- **8-color variant**: add cyan, magenta, yellow, and white for 3 bits/cell, yielding 12 bytes raw / 6 bytes data in an 8×8 footprint (significantly harder to scan reliably).
-- **Quiet zone**: a 1-cell white border around the symbol (making the physical size 10×10 cells) improves scanner detection.
+Install: `npm install chessmatrix`
+
+```javascript
+import { lettersToBytes, buildGrid, renderGrid } from 'chessmatrix';
+
+// Encode 4 bytes onto a canvas
+const bytes = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF]);
+const grid  = buildGrid(bytes);
+renderGrid(grid, document.getElementById('canvas'), 40);  // 40px per cell
+```
+
+```javascript
+import { bytesToLetters, lettersToBytes, buildGrid } from 'chessmatrix';
+
+// 6-letter convenience codec (5-bit packing, A=0…Z=25)
+const bytes   = lettersToBytes('HELLO!'.replace(/[^A-Z]/gi, 'A'));  // Uint8Array(4)
+const letters = bytesToLetters(bytes);   // → 'HELLOA'
+```
+
+```javascript
+import { ChessMatrixScanner } from 'chessmatrix';
+
+// Camera scanner (browser only — requires getUserMedia)
+const scanner = new ChessMatrixScanner({
+  videoEl:  document.getElementById('video'),
+  canvasEl: document.getElementById('canvas'),
+  onDecode: (letters) => console.log('Scanned:', letters),
+  onStatus: (msg, state) => console.log(state, msg),
+});
+await scanner.start();
+```
+
+**API**
+
+| Export | Description |
+|---|---|
+| `buildGrid(bytes: Uint8Array) → Int8Array` | Encode 4 bytes → 64-cell flat grid (row-major) |
+| `renderGrid(grid, canvas, cellSize?)` | Draw grid on an HTMLCanvasElement |
+| `lettersToBytes(str) → Uint8Array` | 6-letter string → 4 bytes (5-bit packing) |
+| `bytesToLetters(bytes) → string` | 4 bytes → 6-letter string |
+| `ChessMatrixScanner` | Semi-guided camera scanner class (browser only) |
+| `CorrectionError` | Thrown when RS decoding cannot correct errors |
+| `DATA_CELLS` | `[row, col][]` — the 32 data cell positions in read order |
+
+> `renderGrid` and `ChessMatrixScanner` require a browser environment (Canvas API / `getUserMedia`). The codec functions (`buildGrid`, `lettersToBytes`, etc.) are pure JavaScript and work in Node.js.
+
+**Browser (CDN, no bundler)**
+```html
+<script type="module">
+  import { buildGrid, renderGrid } from
+    'https://cdn.jsdelivr.net/npm/chessmatrix/chessmatrix.js';
+</script>
+```
 
 ---
 

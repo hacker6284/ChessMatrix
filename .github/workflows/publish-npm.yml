@@ -1,0 +1,34 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'   # triggers on v1.0.0, v1.2.3, etc.
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # required for npm Trusted Publishing (OIDC)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Sync version from git tag
+        # Sets package.json version to match the pushed tag (strips leading "v").
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          npm version "$TAG" --no-git-tag-version
+
+      - name: Publish to npm
+        # --provenance attaches a signed build attestation (required for Trusted Publishing).
+        # No NPM_TOKEN needed — identity comes from the OIDC token above.
+        # Setup: npmjs.com → your package → Settings → Publishing → Add Trusted Publisher
+        #   GitHub org/user: hacker6284   repo: ChessMatrix   workflow: publish-npm.yml
+        run: npm publish --access public --provenance

@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chessmatrix"
+version = "1.0.0"
+description = "ChessMatrix — 8×8 four-color 2D barcode codec with Reed-Solomon error correction"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+keywords = ["barcode", "2d-barcode", "color-barcode", "reed-solomon", "chessmatrix"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.optional-dependencies]
+# Pillow is only needed for render_image(); the codec itself has no dependencies.
+render = ["Pillow>=9.0"]
+
+[project.urls]
+Homepage   = "https://github.com/hacker6284/ChessMatrix"
+Repository = "https://github.com/hacker6284/ChessMatrix"
+Issues     = "https://github.com/hacker6284/ChessMatrix/issues"
+
+[project.scripts]
+# Exposes `chessmatrix` as a CLI command that runs the built-in demo.
+chessmatrix = "chessmatrix:_demo"
+
+[tool.setuptools]
+# Single-file module — no package directory needed.
+py-modules = ["chessmatrix"]

@@ -1,0 +1,37 @@
+{
+  "name": "chessmatrix",
+  "version": "1.0.0",
+  "description": "ChessMatrix — 8×8 four-color 2D barcode codec, renderer, and browser scanner",
+  "type": "module",
+  "exports": {
+    ".": "./chessmatrix.js"
+  },
+  "main": "./chessmatrix.js",
+  "files": [
+    "chessmatrix.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "barcode",
+    "2d-barcode",
+    "color-barcode",
+    "reed-solomon",
+    "chessmatrix",
+    "qr-code",
+    "canvas"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/hacker6284/ChessMatrix",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hacker6284/ChessMatrix.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hacker6284/ChessMatrix/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false
+}
