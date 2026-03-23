@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChessMatrix — 4-color 8×8 barcode</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #111;
+      --surface:  #1c1c1e;
+      --border:   #2c2c2e;
+      --text:     #f0f0f0;
+      --muted:    #888;
+      --k: #0a0a0a; --r: #dc2828; --g: #28b428; --b: #2828dc;
+      --success:  #00e87a;
+      --radius:   12px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 2.5rem 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-strip {
+      display: inline-flex;
+      gap: 4px;
+      margin-bottom: 0.6rem;
+    }
+    .logo-strip span {
+      width: 12px; height: 12px;
+      border-radius: 2px;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    h1 .accent-r { color: var(--r); }
+    h1 .accent-g { color: var(--g); }
+    h1 .accent-b { color: var(--b); }
+    header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+    }
+
+    /* ── Main panels ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--surface);
+      padding: 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .panel:first-child { border-right: 1px solid var(--border); }
+
+    h2 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    /* ── Create panel ── */
+    .letter-wrap {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+    .letter-box {
+      width: 42px; height: 52px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-weight: 700;
+      color: var(--text);
+      position: relative;
+      transition: border-color 0.15s;
+    }
+    .letter-box.active  { border-color: #555; }
+    .letter-box::after {
+      content: '';
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px; height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+    }
+    #letter-input {
+      position: absolute;
+      opacity: 0;
+      width: 0; height: 0;
+      pointer-events: none;
+    }
+    .input-tap-target {
+      cursor: text;
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .canvas-center { display: flex; justify-content: center; }
+    #create-canvas { image-rendering: pixelated; max-width: 100%; }
+
+    .btn {
+      background: var(--border);
+      color: var(--text);
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      align-self: center;
+    }
+    .btn:hover  { background: #3a3a3c; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg);
+      padding: 0.75rem 1.6rem;
+      font-size: 0.95rem;
+    }
+    .btn-primary:hover { background: #d0d0d0; }
+
+    /* ── Scan panel ── */
+    .video-wrap {
+      position: relative;
+      background: #000;
+      border-radius: var(--radius);
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--muted);
+    }
+    .video-placeholder svg { opacity: 0.4; }
+    #scan-video  { display: none; }
+    #scan-canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+    }
+    .scan-controls { display: flex; gap: 0.6rem; }
+
+    .scan-status {
+      font-size: 0.85rem;
+      color: var(--muted);
+      min-height: 1.4em;
+      transition: color 0.2s;
+    }
+    .scan-status.scanning { color: var(--muted); }
+    .scan-status.success  { color: var(--success); }
+    .scan-status.error    { color: #ff6b6b; }
+    .scan-status.idle     { color: var(--muted); }
+
+    .scan-result-wrap {
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .scan-result-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .scan-result {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--success);
+    }
+    @keyframes flash-in {
+      from { opacity: 0; transform: scale(0.92); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .scan-result.flash { animation: flash-in 0.25s ease-out; }
+
+    /* ── Color legend ── */
+    .legend {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 0.25rem;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 0.75rem; color: var(--muted);
+    }
+    .swatch {
+      width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--muted); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      .panel:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+      h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-strip" aria-hidden="true">
+    <span style="background:#0a0a0a"></span>
+    <span style="background:#dc2828"></span>
+    <span style="background:#28b428"></span>
+    <span style="background:#2828dc"></span>
+  </div>
+  <h1>Chess<span class="accent-r">M</span><span class="accent-g">a</span><span class="accent-b">t</span>rix</h1>
+  <p>4-color 8×8 barcode · fits on a chessboard · 4-byte payload with Reed-Solomon error correction</p>
+</header>
+
+<main>
+
+  <!-- ── Create panel ─────────────────────────────── -->
+  <section class="panel" aria-label="Create a ChessMatrix barcode">
+    <h2>Create</h2>
+
+    <!-- Hidden real input, visible display boxes -->
+    <input id="letter-input" type="text" maxlength="6"
+           autocomplete="off" autocorrect="off" autocapitalize="characters"
+           spellcheck="false" aria-label="Enter 6 letters A–Z"
+           inputmode="text">
+
+    <div class="input-tap-target" id="letter-tap" role="button" tabindex="0"
+         aria-label="Click to enter letters" title="Click to type">
+      <div class="letter-box" id="lb0">&nbsp;</div>
+      <div class="letter-box" id="lb1">&nbsp;</div>
+      <div class="letter-box" id="lb2">&nbsp;</div>
+      <div class="letter-box" id="lb3">&nbsp;</div>
+      <div class="letter-box" id="lb4">&nbsp;</div>
+      <div class="letter-box" id="lb5">&nbsp;</div>
+    </div>
+
+    <div class="canvas-center">
+      <canvas id="create-canvas" aria-label="ChessMatrix barcode"></canvas>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span class="legend-item"><span class="swatch" style="background:#0a0a0a;border:1px solid #444"></span>00</span>
+      <span class="legend-item"><span class="swatch" style="background:#dc2828"></span>01</span>
+      <span class="legend-item"><span class="swatch" style="background:#28b428"></span>10</span>
+      <span class="legend-item"><span class="swatch" style="background:#2828dc"></span>11</span>
+    </div>
+
+    <button class="btn" id="download-btn">Download PNG</button>
+  </section>
+
+  <!-- ── Scan panel ──────────────────────────────── -->
+  <section class="panel" aria-label="Scan a ChessMatrix barcode">
+    <h2>Scan</h2>
+
+    <div class="video-wrap" id="video-wrap">
+      <div class="video-placeholder" id="video-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+        </svg>
+        <span>Camera preview</span>
+      </div>
+      <video id="scan-video" autoplay playsinline muted></video>
+      <canvas id="scan-canvas" aria-label="Camera feed with alignment overlay"></canvas>
+    </div>
+
+    <div class="scan-controls">
+      <button class="btn btn-primary" id="start-btn">Start Camera</button>
+      <button class="btn" id="stop-btn" style="display:none">Stop</button>
+    </div>
+
+    <div class="scan-status idle" id="scan-status" aria-live="polite">
+      Point your camera at a ChessMatrix barcode
+    </div>
+
+    <div class="scan-result-wrap" id="result-wrap">
+      <div class="scan-result-label">Decoded</div>
+      <div class="scan-result" id="scan-result" aria-live="assertive"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <a href="https://github.com/hacker6284/ChessMatrix" target="_blank" rel="noopener">ChessMatrix</a>
+  &nbsp;·&nbsp; open specification &nbsp;·&nbsp;
+  4 bytes · RS(8,4) · 8×8 cells
+</footer>
+
+<script type="module">
+import {
+  lettersToBytes, bytesToLetters,
+  buildGrid, renderGrid,
+  ChessMatrixScanner,
+} from './chessmatrix.js';
+
+// ── Create panel ──────────────────────────────────────────────────────────────
+
+const letterInput  = document.getElementById('letter-input');
+const letterTap    = document.getElementById('letter-tap');
+const createCanvas = document.getElementById('create-canvas');
+const downloadBtn  = document.getElementById('download-btn');
+const boxes        = Array.from({ length: 6 }, (_, i) => document.getElementById(`lb${i}`));
+
+function updateDisplay(raw) {
+  const val = raw.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+  boxes.forEach((box, i) => {
+    box.textContent = val[i] ?? '\u00a0';
+    box.classList.toggle('active', i < val.length);
+  });
+  return val;
+}
+
+function renderFromInput() {
+  const val   = updateDisplay(letterInput.value);
+  const padded = val.padEnd(6, 'A');
+  const bytes  = lettersToBytes(padded);
+  const grid   = buildGrid(bytes);
+  renderGrid(grid, createCanvas, 38);
+}
+
+// Focus the hidden input when the tap target or any letter box is clicked
+letterTap.addEventListener('click', () => letterInput.focus());
+letterTap.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') letterInput.focus();
+});
+
+letterInput.addEventListener('input', e => {
+  const cleaned = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+  e.target.value = cleaned;
+  renderFromInput();
+});
+
+letterInput.addEventListener('focus', () =>
+  boxes[Math.min(letterInput.value.length, 5)]?.classList.add('active')
+);
+letterInput.addEventListener('blur', () =>
+  boxes.forEach(b => b.classList.remove('active'))
+);
+
+downloadBtn.addEventListener('click', () => {
+  const name = (letterInput.value.padEnd(6, 'A').slice(0, 6)) || 'AAAAAA';
+  const link = Object.assign(document.createElement('a'), {
+    download: `chessmatrix-${name}.png`,
+    href:     createCanvas.toDataURL('image/png'),
+  });
+  link.click();
+});
+
+// Initial render
+renderFromInput();
+
+// ── Scan panel ────────────────────────────────────────────────────────────────
+
+const scanVideo   = document.getElementById('scan-video');
+const scanCanvas  = document.getElementById('scan-canvas');
+const startBtn    = document.getElementById('start-btn');
+const stopBtn     = document.getElementById('stop-btn');
+const statusEl    = document.getElementById('scan-status');
+const resultWrap  = document.getElementById('result-wrap');
+const resultEl    = document.getElementById('scan-result');
+const placeholder = document.getElementById('video-placeholder');
+
+let scanner = null;
+
+startBtn.addEventListener('click', async () => {
+  startBtn.disabled = true;
+  startBtn.textContent = 'Starting…';
+
+  scanner = new ChessMatrixScanner({
+    videoEl:  scanVideo,
+    canvasEl: scanCanvas,
+    onDecode(letters) {
+      resultEl.textContent = letters;
+      resultWrap.style.display = 'flex';
+      // Trigger re-animation
+      resultEl.classList.remove('flash');
+      void resultEl.offsetWidth;
+      resultEl.classList.add('flash');
+    },
+    onStatus(msg, state) {
+      statusEl.textContent = msg;
+      statusEl.className   = `scan-status ${state}`;
+    },
+  });
+
+  try {
+    await scanner.start();
+    placeholder.style.display = 'none';
+    scanCanvas.style.display  = 'block';
+    startBtn.style.display    = 'none';
+    stopBtn.style.display     = '';
+  } catch (_) {
+    startBtn.disabled    = false;
+    startBtn.textContent = 'Start Camera';
+  }
+});
+
+stopBtn.addEventListener('click', () => {
+  scanner?.stop();
+  scanner = null;
+  scanCanvas.style.display  = 'none';
+  placeholder.style.display = '';
+  startBtn.style.display    = '';
+  startBtn.disabled         = false;
+  startBtn.textContent      = 'Start Camera';
+  stopBtn.style.display     = 'none';
+  statusEl.textContent      = 'Point your camera at a ChessMatrix barcode';
+  statusEl.className        = 'scan-status idle';
+  resultWrap.style.display  = 'none';
+});
+</script>
+</body>
+</html>
