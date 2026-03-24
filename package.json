@@ -1,6 +1,6 @@
 {
   "name": "chessmatrix",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ChessMatrix — 8×8 four-color 2D barcode codec, renderer, and browser scanner",
   "type": "module",
   "exports": {
