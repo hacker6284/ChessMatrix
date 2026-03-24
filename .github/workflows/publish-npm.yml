@@ -18,11 +18,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # No registry-url — omitting it lets npm use OIDC Trusted Publishing directly.
-          # registry-url would write an .npmrc expecting NODE_AUTH_TOKEN, conflicting with OIDC.
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Clear placeholder auth token written by setup-node
+        # setup-node writes _authToken=${NODE_AUTH_TOKEN} to .npmrc; if that env var is
+        # unset the literal placeholder blocks npm's built-in OIDC Trusted Publishing flow.
+        run: npm config delete //registry.npmjs.org/:_authToken
 
       - name: Publish to npm
-        # Authentication is handled by npm's OIDC Trusted Publishing — no token needed.
+        # Authentication is handled by npm's OIDC Trusted Publishing — no stored token needed.
         # Setup: npmjs.com → chessmatrix → Settings → Publishing → Trusted Publisher
         #   GitHub owner: hacker6284  repo: ChessMatrix  workflow: publish-npm.yml
         run: npm publish --access public --provenance
