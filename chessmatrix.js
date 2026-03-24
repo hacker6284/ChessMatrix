@@ -350,7 +350,7 @@ export function renderGrid(grid, canvas, cellSize = 40, darkBg = false) {
       let rgb;
       if (darkBg && isStructural) {
         // Invert structural cells: finder/timing BLACK → white, timing WHITE → black
-        rgb = cell === WHITE ? [235, 235, 235] : [10, 10, 10];
+        rgb = cell === WHITE ? [10, 10, 10] : [235, 235, 235];
       } else {
         rgb = _COLOR_RGB[cell] ?? _COLOR_RGB[WHITE];
       }
