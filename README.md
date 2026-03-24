@@ -113,7 +113,28 @@ Located at the four corners of the 6×6 interior:
 
 A decoder samples these four cells first to calibrate its color discrimination thresholds before decoding any data cells. This compensates for lighting color temperature, ink variation, and camera white-balance errors.
 
-### 2.4 Data Cells (32 cells)
+### 2.4 Dark Quiet Zone Variant
+
+ChessMatrix defines a second rendering mode in which the quiet zone and all structural cells are polarity-inverted. This is useful for display on dark surfaces (OLED screens, dark labels) where light-on-dark offers better contrast.
+
+**Changes from standard:**
+
+| Cell type | Standard | Dark quiet zone |
+|-----------|----------|-----------------|
+| Quiet zone background | WHITE | BLACK |
+| Left/bottom finder bars | **BLACK** | **WHITE** |
+| Timing cells (normally BLACK) | **BLACK** | **WHITE** |
+| Timing cells (normally WHITE) | **WHITE** | **BLACK** |
+| Color calibration anchors | unchanged | unchanged |
+| Data cells | unchanged | unchanged |
+
+The four calibration anchors at (1,1), (1,6), (6,1), (6,6) remain BLACK/RED/GREEN/BLUE in both modes. A decoder uses them identically regardless of variant.
+
+**Detection:** Cell (7,0) — the bottom-left corner, where the finder bars overlap — is BLACK in standard mode and WHITE in dark mode. A decoder samples its luminance: if bright, the dark quiet zone variant is in use.
+
+**API:** Pass `dark_bg=True` (Python) or `darkBg=true` (JavaScript) to any render function. `encode()` / `buildGrid()` always produce the same grid regardless; the flag only affects output rendering.
+
+### 2.5 Data Cells (32 cells)
 
 The remaining interior cells, read in row-major order (top to bottom, left to right), skipping the four anchors:
 
@@ -252,8 +273,8 @@ assert recovered == data
 |---|---|
 | `encode(data: bytes) -> Grid` | Encode 4 bytes → 8×8 color grid |
 | `decode(grid: Grid) -> bytes` | Decode grid → 4 bytes (RS error correction applied) |
-| `render_image(grid, path, cell_size=40)` | Save PNG (requires Pillow) |
-| `render_ascii(grid)` | Print colored ASCII art to terminal |
+| `render_image(grid, path, cell_size=40, dark_bg=False)` | Save PNG (requires Pillow) |
+| `render_ascii(grid, dark_bg=False)` | Print colored ASCII art to terminal |
 | `CorrectionError` | Raised when RS decoding cannot correct errors |
 
 `Grid` is `List[List[int]]` — an 8×8 nested list of color values (0–3, or -1 for white structural cells).
@@ -299,7 +320,7 @@ await scanner.start();
 | Export | Description |
 |---|---|
 | `buildGrid(bytes: Uint8Array) → Int8Array` | Encode 4 bytes → 64-cell flat grid (row-major) |
-| `renderGrid(grid, canvas, cellSize?)` | Draw grid on an HTMLCanvasElement |
+| `renderGrid(grid, canvas, cellSize?, darkBg?)` | Draw grid on an HTMLCanvasElement |
 | `lettersToBytes(str) → Uint8Array` | 6-letter string → 4 bytes (5-bit packing) |
 | `bytesToLetters(bytes) → string` | 4 bytes → 6-letter string |
 | `ChessMatrixScanner` | Semi-guided camera scanner class (browser only) |

@@ -152,6 +152,23 @@
     }
     .btn-primary:hover { background: #d0d0d0; }
 
+    /* ── Dark-bg toggle ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      align-self: center;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 14px; height: 14px;
+      accent-color: var(--text);
+      cursor: pointer;
+    }
+
     /* ── Scan panel ── */
     .video-wrap {
       position: relative;
@@ -296,6 +313,11 @@
       <span class="legend-item"><span class="swatch" style="background:#2828dc"></span>11</span>
     </div>
 
+    <label class="toggle-row">
+      <input type="checkbox" id="dark-bg-toggle">
+      Dark background
+    </label>
+
     <button class="btn" id="download-btn">Download PNG</button>
   </section>
 
@@ -350,6 +372,7 @@ const letterInput  = document.getElementById('letter-input');
 const letterTap    = document.getElementById('letter-tap');
 const createCanvas = document.getElementById('create-canvas');
 const downloadBtn  = document.getElementById('download-btn');
+const darkBgToggle = document.getElementById('dark-bg-toggle');
 const boxes        = Array.from({ length: 6 }, (_, i) => document.getElementById(`lb${i}`));
 
 function updateDisplay(raw) {
@@ -362,11 +385,11 @@ function updateDisplay(raw) {
 }
 
 function renderFromInput() {
-  const val   = updateDisplay(letterInput.value);
+  const val    = updateDisplay(letterInput.value);
   const padded = val.padEnd(6, 'A');
   const bytes  = lettersToBytes(padded);
   const grid   = buildGrid(bytes);
-  renderGrid(grid, createCanvas, 38);
+  renderGrid(grid, createCanvas, 38, darkBgToggle.checked);
 }
 
 // Focus the hidden input when the tap target or any letter box is clicked
@@ -389,13 +412,16 @@ letterInput.addEventListener('blur', () =>
 );
 
 downloadBtn.addEventListener('click', () => {
-  const name = (letterInput.value.padEnd(6, 'A').slice(0, 6)) || 'AAAAAA';
+  const name    = (letterInput.value.padEnd(6, 'A').slice(0, 6)) || 'AAAAAA';
+  const variant = darkBgToggle.checked ? '-dark' : '';
   const link = Object.assign(document.createElement('a'), {
-    download: `chessmatrix-${name}.png`,
+    download: `chessmatrix-${name}${variant}.png`,
     href:     createCanvas.toDataURL('image/png'),
   });
   link.click();
 });
+
+darkBgToggle.addEventListener('change', renderFromInput);
 
 // Initial render
 renderFromInput();

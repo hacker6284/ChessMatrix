@@ -330,22 +330,31 @@ const _COLOR_RGB = {
  * @param {Int8Array}         grid      - 64-element row-major grid from buildGrid()
  * @param {HTMLCanvasElement} canvas    - target canvas
  * @param {number}            cellSize  - pixels per cell (default 40)
+ * @param {boolean}           darkBg   - if true, render the dark quiet zone variant
  */
-export function renderGrid(grid, canvas, cellSize = 40) {
-  const quiet = 1;  // 1-cell white quiet zone border
+export function renderGrid(grid, canvas, cellSize = 40, darkBg = false) {
+  const quiet = 1;  // 1-cell quiet zone border
   const total = (SIZE + 2 * quiet) * cellSize;
   canvas.width  = total;
   canvas.height = total;
   const ctx = canvas.getContext('2d');
 
   // Quiet zone background
-  ctx.fillStyle = '#ebebeb';
+  ctx.fillStyle = darkBg ? '#0a0a0a' : '#ebebeb';
   ctx.fillRect(0, 0, total, total);
 
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
       const cell = grid[r * SIZE + c];
-      const [rr, gg, bb] = _COLOR_RGB[cell] ?? _COLOR_RGB[WHITE];
+      const isStructural = (r === 0 || r === 7 || c === 0 || c === 7);
+      let rgb;
+      if (darkBg && isStructural) {
+        // Invert structural cells: finder/timing BLACK → white, timing WHITE → black
+        rgb = cell === WHITE ? [235, 235, 235] : [10, 10, 10];
+      } else {
+        rgb = _COLOR_RGB[cell] ?? _COLOR_RGB[WHITE];
+      }
+      const [rr, gg, bb] = rgb;
       ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
       ctx.fillRect(
         (c + quiet) * cellSize,
@@ -463,16 +472,19 @@ export class ChessMatrixScanner {
       size: boxSize,
     };
 
-    // Sample → classify → decode
+    // Sample once, then try standard variant first, dark quiet zone second
+    const raw = this._sampleColors(imageData, box, vw);
     let decoded = null;
-    try {
-      const raw        = this._sampleColors(imageData, box, vw);
-      const gridCells  = this._classifyColors(raw);
-      const codeword   = this._extractCodeword(gridCells);
-      const bytes      = rsDecode(codeword);
-      decoded          = bytesToLetters(bytes);
-    } catch (_) {
-      /* CorrectionError or transient noise — keep scanning */
+    for (const darkBg of [false, true]) {
+      try {
+        const gridCells = this._classifyColors(raw, darkBg);
+        const codeword  = this._extractCodeword(gridCells);
+        const bytes     = rsDecode(codeword);
+        decoded         = bytesToLetters(bytes);
+        break;
+      } catch (_) {
+        /* CorrectionError or transient noise — try next variant */
+      }
     }
 
     // Require 2 consecutive identical decodes before firing onDecode
@@ -531,9 +543,10 @@ export class ChessMatrixScanner {
   /**
    * Classify raw color samples into a full grid using anchor calibration.
    * Returns Int8Array(64) with -1 for structural cells, 0-3 for data cells.
+   * @param {boolean} darkBg - if true, use dark quiet zone white reference ((0,0) instead of (0,1))
    */
-  _classifyColors(raw) {
-    // Anchor samples (known colors at fixed positions)
+  _classifyColors(raw, darkBg = false) {
+    // Anchor samples (known colors at fixed positions — unchanged in both variants)
     const refs = {
       [K]: raw[1 * SIZE + 1],   // (1,1) = BLACK
       [R]: raw[1 * SIZE + 6],   // (1,6) = RED
@@ -541,10 +554,11 @@ export class ChessMatrixScanner {
       [B]: raw[6 * SIZE + 6],   // (6,6) = BLUE
     };
 
-    // White reference: top timing cell at (0,1) is always WHITE
-    const wr = refs[K] ? (raw[0 * SIZE + 1].r || 1) : 255;
-    const wg = refs[K] ? (raw[0 * SIZE + 1].g || 1) : 255;
-    const wb = refs[K] ? (raw[0 * SIZE + 1].b || 1) : 255;
+    // White reference: (0,1) is WHITE in standard mode; (0,0) is WHITE in dark mode
+    const wrCell = darkBg ? raw[0 * SIZE + 0] : raw[0 * SIZE + 1];
+    const wr = wrCell.r || 1;
+    const wg = wrCell.g || 1;
+    const wb = wrCell.b || 1;
 
     // Normalize references
     const nref = {};

@@ -474,17 +474,24 @@ def decode(grid: Grid) -> bytes:
 # Rendering
 # ─────────────────────────────────────────────────────────────────────────────
 
-def render_ascii(grid: Grid) -> None:
+def render_ascii(grid: Grid, dark_bg: bool = False) -> None:
     """
     Print the ChessMatrix grid to stdout using ANSI color codes.
     Each cell is shown as two spaces (for a roughly square cell in most terminals).
     White timing cells are shown in light gray; color cells use their actual color.
+
+    Args:
+        dark_bg: If True, render the dark quiet zone variant (inverted outer border).
     """
     print()
-    for row in grid:
+    for r, row in enumerate(grid):
         line = ""
-        for cell in row:
-            if cell == _WHITE:
+        for c, cell in enumerate(row):
+            is_structural = (r == 0 or r == 7 or c == 0 or c == 7)
+            if dark_bg and is_structural:
+                # Invert: finder/timing BLACK → white, timing WHITE → black
+                line += (WHITE_ANSI if cell == _WHITE else COLOR_ANSI[K]) + "  " + RESET_ANSI
+            elif cell == _WHITE:
                 line += WHITE_ANSI + "  " + RESET_ANSI
             else:
                 line += COLOR_ANSI[cell] + "  " + RESET_ANSI
@@ -499,7 +506,8 @@ def render_ascii(grid: Grid) -> None:
     print()
 
 
-def render_image(grid: Grid, path: str, cell_size: int = 40, quiet_zone: int = 1) -> None:
+def render_image(grid: Grid, path: str, cell_size: int = 40, quiet_zone: int = 1,
+                 dark_bg: bool = False) -> None:
     """
     Save the ChessMatrix grid as a PNG image.
 
@@ -507,7 +515,8 @@ def render_image(grid: Grid, path: str, cell_size: int = 40, quiet_zone: int = 1
         grid:       8×8 color grid from encode().
         path:       Output file path (should end in .png).
         cell_size:  Pixel size of each cell (default 40 → 320×320 px symbol).
-        quiet_zone: Width in cells of white border around symbol (default 1).
+        quiet_zone: Width in cells of border around symbol (default 1).
+        dark_bg:    If True, render the dark quiet zone variant (inverted outer border).
 
     Requires: Pillow  (pip install Pillow)
     """
@@ -516,8 +525,9 @@ def render_image(grid: Grid, path: str, cell_size: int = 40, quiet_zone: int = 1
     except ImportError:
         raise ImportError("Pillow is required for render_image(). Install with: pip install Pillow")
 
+    bg_rgb = (10, 10, 10) if dark_bg else (255, 255, 255)
     total = (SIZE + 2 * quiet_zone) * cell_size
-    img = Image.new("RGB", (total, total), (255, 255, 255))
+    img = Image.new("RGB", (total, total), bg_rgb)
     draw = ImageDraw.Draw(img)
 
     for r, row in enumerate(grid):
@@ -527,7 +537,10 @@ def render_image(grid: Grid, path: str, cell_size: int = 40, quiet_zone: int = 1
             x1 = x0 + cell_size - 1
             y1 = y0 + cell_size - 1
 
-            if cell == _WHITE:
+            is_structural = (r == 0 or r == 7 or c == 0 or c == 7)
+            if dark_bg and is_structural:
+                rgb = (235, 235, 235) if cell == _WHITE else COLOR_RGB[K]
+            elif cell == _WHITE:
                 rgb = (235, 235, 235)
             else:
                 rgb = COLOR_RGB[cell]
