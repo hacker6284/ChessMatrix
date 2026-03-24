@@ -490,7 +490,7 @@ def render_ascii(grid: Grid, dark_bg: bool = False) -> None:
             is_structural = (r == 0 or r == 7 or c == 0 or c == 7)
             if dark_bg and is_structural:
                 # Invert: finder/timing BLACK → white, timing WHITE → black
-                line += (WHITE_ANSI if cell == _WHITE else COLOR_ANSI[K]) + "  " + RESET_ANSI
+                line += (COLOR_ANSI[K] if cell == _WHITE else WHITE_ANSI) + "  " + RESET_ANSI
             elif cell == _WHITE:
                 line += WHITE_ANSI + "  " + RESET_ANSI
             else:
@@ -539,7 +539,7 @@ def render_image(grid: Grid, path: str, cell_size: int = 40, quiet_zone: int = 1
 
             is_structural = (r == 0 or r == 7 or c == 0 or c == 7)
             if dark_bg and is_structural:
-                rgb = (235, 235, 235) if cell == _WHITE else COLOR_RGB[K]
+                rgb = COLOR_RGB[K] if cell == _WHITE else (235, 235, 235)
             elif cell == _WHITE:
                 rgb = (235, 235, 235)
             else:
