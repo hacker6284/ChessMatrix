@@ -18,12 +18,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          # No registry-url — omitting it lets npm use OIDC Trusted Publishing directly.
+          # registry-url would write an .npmrc expecting NODE_AUTH_TOKEN, conflicting with OIDC.
 
       - name: Publish to npm
-        # --provenance attaches a signed build attestation (required for Trusted Publishing).
-        # No NPM_TOKEN needed — identity comes from the OIDC token above.
-        # Setup: npmjs.com → your package → Settings → Publishing → Add Trusted Publisher
-        #   GitHub org/user: hacker6284   repo: ChessMatrix   workflow: publish-npm.yml
-        # Version in package.json is bumped and committed before tagging — no sync needed.
+        # Authentication is handled by npm's OIDC Trusted Publishing — no token needed.
+        # Setup: npmjs.com → chessmatrix → Settings → Publishing → Trusted Publisher
+        #   GitHub owner: hacker6284  repo: ChessMatrix  workflow: publish-npm.yml
         run: npm publish --access public --provenance
