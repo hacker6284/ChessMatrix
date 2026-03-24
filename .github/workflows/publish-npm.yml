@@ -24,7 +24,7 @@ jobs:
         # Sets package.json version to match the pushed tag (strips leading "v").
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          npm version "$TAG" --no-git-tag-version
+          npm version "$TAG" --no-git-tag-version --allow-same-version
 
       - name: Publish to npm
         # --provenance attaches a signed build attestation (required for Trusted Publishing).
