@@ -10,23 +10,23 @@ jobs:
     name: Publish to npm
     runs-on: ubuntu-latest
     permissions:
-      id-token: write   # required for npm Trusted Publishing (OIDC)
+      id-token: write   # required for OIDC Trusted Publishing
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Clear placeholder auth token written by setup-node
-        # setup-node writes _authToken=${NODE_AUTH_TOKEN} to .npmrc; if that env var is
-        # unset the literal placeholder blocks npm's built-in OIDC Trusted Publishing flow.
-        run: npm config delete //registry.npmjs.org/:_authToken
+      - name: Upgrade npm
+        # OIDC Trusted Publishing requires npm >= 11.5.1; Node 22 ships with an older version.
+        run: npm install -g npm@latest
 
       - name: Publish to npm
-        # Authentication is handled by npm's OIDC Trusted Publishing — no stored token needed.
+        # NODE_AUTH_TOKEN must not be set — OIDC Trusted Publishing handles auth automatically.
         # Setup: npmjs.com → chessmatrix → Settings → Publishing → Trusted Publisher
         #   GitHub owner: hacker6284  repo: ChessMatrix  workflow: publish-npm.yml
+        # Version in package.json is bumped and committed before tagging — no sync needed.
         run: npm publish --access public --provenance
